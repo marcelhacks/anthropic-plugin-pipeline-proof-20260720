@@ -22,7 +22,7 @@ jobs:
           max-bumps: "1"
           only: lfs-order-policy-control
           pr-mode: batch
-          pr-branch: bump/lfs-deployable-3a0fdc2
+          pr-branch: bump/lfs-deployable-3a0fdc2-v2
           claude-cli-version: 2.1.215
 
       - name: Dispatch policy scan, wait, then dispatch structural validation
@@ -32,7 +32,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$PR_URL"
-          branch=bump/lfs-deployable-3a0fdc2
+          branch=bump/lfs-deployable-3a0fdc2-v2
           echo "CONTROL_PR_URL=$PR_URL"
           echo "CONTROL_BRANCH=$branch"
 

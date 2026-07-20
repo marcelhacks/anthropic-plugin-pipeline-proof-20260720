@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   validate:
@@ -15,6 +16,41 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Preserve the observed scan-before-validate order on reopen
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CONTROL_HEAD_REF: ${{ github.head_ref }}
+          REOPENED_AT: ${{ github.event.pull_request.updated_at }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 36); do
+            scan_json="$(
+              gh run list \
+                --workflow scan.yml \
+                --branch "$CONTROL_HEAD_REF" \
+                --event pull_request \
+                --limit 20 \
+                --json databaseId,status,conclusion,createdAt |
+              jq -c --arg cutoff "$REOPENED_AT" \
+                '[.[] | select(.createdAt >= $cutoff)] | sort_by(.databaseId) | last // empty'
+            )"
+            if [[ -n "$scan_json" ]]; then
+              echo "CONTROL_REOPEN_SCAN=$scan_json"
+              status="$(jq -r .status <<<"$scan_json")"
+              conclusion="$(jq -r .conclusion <<<"$scan_json")"
+              if [[ "$status" == completed && "$conclusion" == success ]]; then
+                break
+              fi
+              if [[ "$status" == completed ]]; then
+                exit 1
+              fi
+            fi
+            sleep 5
+          done
+          test "${status:-}" = completed
+          test "${conclusion:-}" = success
 
       - name: Run Anthropic's pinned validation action
         id: validate
