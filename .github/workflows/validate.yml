@@ -1,0 +1,36 @@
+name: Controlled structural validation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Anthropic's pinned validation action
+        id: validate
+        uses: anthropics/claude-plugins-community/.github/actions/validate-plugins@426e469f322952061102b286b378c0c9733a0934
+        with:
+          marketplace-path: .claude-plugin/marketplace.json
+          base-ref: origin/main
+          skip-local-folders: "true"
+          claude-cli-version: 2.1.215
+
+      - name: Assert the fail-closed validator evaluated the plugin
+        env:
+          CHANGED_EXTERNAL: ${{ steps.validate.outputs.changed-external }}
+          RESULT: ${{ steps.validate.outputs.result }}
+        run: |
+          set -euo pipefail
+          echo "CHANGED_EXTERNAL=$CHANGED_EXTERNAL"
+          echo "RESULT=$RESULT"
+          jq -e 'length == 1 and .[0].name == "lfs-order-policy-control"' <<<"$CHANGED_EXTERNAL"
+          test "$RESULT" = pass
+          echo 'CONTROL_VALIDATOR=SUCCESS_WITH_ONE_EVALUATED_TARGET'

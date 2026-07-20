@@ -1,0 +1,40 @@
+name: Controlled policy scan
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Anthropic's pinned scan action
+        id: scan
+        uses: anthropics/claude-plugins-community/.github/actions/scan-plugins@426e469f322952061102b286b378c0c9733a0934
+        with:
+          anthropic-api-key: controlled-invalid-key-not-used
+          marketplace-path: .claude-plugin/marketplace.json
+          base-ref: origin/main
+          fail-on-findings: "true"
+          claude-cli-version: 2.1.215
+
+      - name: Assert the selected target disappeared but the action passed
+        env:
+          SCANNED: ${{ steps.scan.outputs.scanned }}
+          FAILED: ${{ steps.scan.outputs.failed }}
+          RESULT: ${{ steps.scan.outputs.result }}
+        run: |
+          set -euo pipefail
+          echo "SCANNED=$SCANNED"
+          echo "FAILED=$FAILED"
+          echo "RESULT=$RESULT"
+          jq -e 'length == 0' <<<"$SCANNED"
+          jq -e 'length == 0' <<<"$FAILED"
+          test "$RESULT" = pass
+          echo 'CONTROL_SCAN_GATE=SUCCESS_WITH_ZERO_VERDICTS'

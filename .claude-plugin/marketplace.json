@@ -1,0 +1,25 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "controlled-lfs-order-marketplace",
+  "description": "Harmless marketplace used to reproduce ordered Git LFS clone behavior",
+  "owner": {
+    "name": "Controlled security test",
+    "email": "controlled-test@example.invalid"
+  },
+  "plugins": [
+    {
+      "name": "lfs-order-policy-control",
+      "description": "Harmless marker-only fixture for policy coverage testing",
+      "author": {
+        "name": "Controlled security test"
+      },
+      "category": "development",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/marcelhacks/anthropic-lfs-order-proof-20260720.git",
+        "sha": "e4136ddf9c7ce381ccc2ffeca55d19392cf4e922"
+      },
+      "homepage": "https://github.com/marcelhacks/anthropic-lfs-order-proof-20260720"
+    }
+  ]
+}

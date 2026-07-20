@@ -1,0 +1,36 @@
+name: Controlled bump and required-check dispatch
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Anthropic's pinned bump action
+        id: bump
+        uses: anthropics/claude-plugins-community/.github/actions/bump-plugin-shas@426e469f322952061102b286b378c0c9733a0934
+        with:
+          marketplace-path: .claude-plugin/marketplace.json
+          max-bumps: "1"
+          only: lfs-order-policy-control
+          pr-mode: per-entry
+          claude-cli-version: 2.1.215
+
+      - name: Dispatch scan before validate, matching the target workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URLS: ${{ steps.bump.outputs.pr-urls }}
+        run: |
+          set -euo pipefail
+          branch="$(jq -er '.[0].branch' <<<"$PR_URLS")"
+          echo "CONTROL_BRANCH=$branch"
+          gh workflow run scan.yml --ref "$branch"
+          gh workflow run validate.yml --ref "$branch"
