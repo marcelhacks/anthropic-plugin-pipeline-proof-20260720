@@ -1,0 +1,38 @@
+name: Controlled distinct-runner LFS replay
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Anthropic's pinned bump action in an independent batch branch
+        id: bump
+        uses: anthropics/claude-plugins-community/.github/actions/bump-plugin-shas@426e469f322952061102b286b378c0c9733a0934
+        with:
+          marketplace-path: .claude-plugin/marketplace.json
+          max-bumps: "1"
+          only: lfs-order-policy-control
+          pr-mode: batch
+          pr-branch: bump/lfs-client-ordinal-replay
+          claude-cli-version: 2.1.215
+
+      - name: Dispatch the target's scan-then-validate order
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ steps.bump.outputs.pr-url }}
+        run: |
+          set -euo pipefail
+          test -n "$PR_URL"
+          branch=bump/lfs-client-ordinal-replay
+          echo "CONTROL_BRANCH=$branch"
+          gh workflow run scan.yml --ref "$branch"
+          gh workflow run validate.yml --ref "$branch"
